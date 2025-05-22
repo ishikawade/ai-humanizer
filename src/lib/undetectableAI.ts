@@ -1,10 +1,8 @@
 import axios from 'axios';
 
 // API credentials
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const USER_ID = '79b84da7-bb2a-4e36-a135-e77e0f3e5144';
 const API_KEY = 'dd410c04-f157-4f4c-9e41-b7d125f2b339';
-// Correct API base URL for Undetectable AI
 const API_BASE_URL = 'https://humanize.undetectable.ai';
 
 // Create an axios instance with default configuration
@@ -118,7 +116,7 @@ export async function humanizeText(text: string, options: HumanizeOptions = {}):
   try {
     // Step 1: Submit the document for humanization
     const submitResponse = await apiClient.post<SubmitDocumentResponse>('/submit', {
-      content: text,
+      text: text, // Changed from 'content' to 'text'
       readability: readabilityMap[options.readability || 'standard'] || 'High School',
       purpose: purposeMap[options.mode || 'paraphrase'] || 'General Writing',
       strength: strengthMap[options.strength || 'medium'] || 'Balanced',
@@ -152,9 +150,7 @@ export async function humanizeText(text: string, options: HumanizeOptions = {}):
           documentResponse = response.data;
           break;
         }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        // If we get an error, the document might not be ready yet
         console.log(`Attempt ${attempts}: Document not ready yet`);
       }
       
@@ -166,47 +162,23 @@ export async function humanizeText(text: string, options: HumanizeOptions = {}):
       return documentResponse.output;
     } else {
       console.warn('Document processing timed out - using fallback humanization');
-      // Use fallback instead of throwing an error
-      return fallbackHumanize(text, {
-        mode: options.mode || 'paraphrase',
-        readability: options.readability || 'standard',
-        strength: options.strength || 'medium',
-        conservativeness: options.conservativeness || 'medium',
-        tone: options.tone || 'default'
-      });
+      return fallbackHumanize(text, options);
     }
   } catch (error: unknown) {
-    // Type guard for axios error
-    const axiosError = error as {
-      response?: {
-        data: unknown;
-        status: number;
-      };
-      request?: unknown;
-      message?: string;
-    };
     console.error('Error calling Undetectable AI:', error);
     
     // Log detailed error information for debugging
-    if (axiosError.response) {
-      console.error('Response data:', axiosError.response.data);
-      console.error('Response status:', axiosError.response.status);
-      console.error(`API error: ${axiosError.response.status} - ${JSON.stringify(axiosError.response.data || {})}`);
-    } else if (axiosError.request) {
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      console.error(`API error: ${error.response.status} - ${JSON.stringify(error.response.data || {})}`);
+    } else if (axios.isAxiosError(error) && error.request) {
       console.error('No response received from API. Please check your internet connection.');
     } else {
-      console.error(`Request setup error: ${axiosError.message || 'Unknown error'}`);
+      console.error(`Request setup error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     
-    // Instead of throwing an error, use the fallback humanization
-    console.warn('Using fallback humanization due to API error');
-    return fallbackHumanize(text, {
-      mode: options.mode || 'paraphrase',
-      readability: options.readability || 'standard',
-      strength: options.strength || 'medium',
-      conservativeness: options.conservativeness || 'medium',
-      tone: options.tone || 'default'
-    });
+    return fallbackHumanize(text, options);
   }
 }
 
@@ -218,11 +190,9 @@ export interface CreditsResponse {
 
 /**
  * Gets the remaining credits for the user from the Undetectable AI API
- * Based on the /check-user-credits endpoint from the API documentation
  */
 export async function getCreditsRemaining(): Promise<number> {
   try {
-    // Use the correct endpoint from the API documentation
     const response = await apiClient.get<CreditsResponse>('/check-user-credits');
     
     if (response.data && typeof response.data.credits === 'number') {
@@ -236,6 +206,6 @@ export async function getCreditsRemaining(): Promise<number> {
     }
   } catch (error: unknown) {
     console.error('Error checking credits:', error);
-    return 0; // Return 0 if we can't get the credits
+    return 0;
   }
 }
