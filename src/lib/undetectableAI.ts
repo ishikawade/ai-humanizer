@@ -116,11 +116,11 @@ export async function humanizeText(text: string, options: HumanizeOptions = {}):
   try {
     // Step 1: Submit the document for humanization
     const submitResponse = await apiClient.post<SubmitDocumentResponse>('/submit', {
-      text: text, // Changed from 'content' to 'text'
+      text: text,
       readability: readabilityMap[options.readability || 'standard'] || 'High School',
       purpose: purposeMap[options.mode || 'paraphrase'] || 'General Writing',
       strength: strengthMap[options.strength || 'medium'] || 'Balanced',
-      model: 'v11' // Using the latest model
+      model: 'v11'
     });
     
     if (submitResponse.data.error) {
@@ -154,7 +154,6 @@ export async function humanizeText(text: string, options: HumanizeOptions = {}):
         console.log(`Attempt ${attempts}: Document not ready yet`);
       }
       
-      // Wait 3 seconds before trying again
       await sleep(3000);
     }
     
@@ -167,7 +166,6 @@ export async function humanizeText(text: string, options: HumanizeOptions = {}):
   } catch (error: unknown) {
     console.error('Error calling Undetectable AI:', error);
     
-    // Log detailed error information for debugging
     if (axios.isAxiosError(error) && error.response) {
       console.error('Response data:', error.response.data);
       console.error('Response status:', error.response.status);
