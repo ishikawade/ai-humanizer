@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 
-// Use dynamic import with ssr: false to ensure the component only renders on the client
 const Humanizer = dynamic(() => import('@/components/Humanizer'), {
   ssr: false,
   loading: () => (

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { humanizeText, getCreditsRemaining, HumanizeOptions } from '@/lib/undetectableAI';
-// Import the diff library for text comparison
 import * as Diff from 'diff';
 
 type HumanizationHistoryItem = {
@@ -20,7 +19,7 @@ export default function Humanizer() {
   const [inputText, setInputText] = useState('');
   const [outputText, setOutputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0); // Progress indicator (0-100)
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [isLoadingCredits, setIsLoadingCredits] = useState(false);
@@ -36,9 +35,15 @@ export default function Humanizer() {
   });
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
-  
-  // Check API connection and fetch available credits on component mount
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const checkApiAndFetchCredits = async () => {
       setIsLoadingCredits(true);
       setApiStatus('checking');
@@ -56,9 +61,8 @@ export default function Humanizer() {
     };
     
     checkApiAndFetchCredits();
-  }, []);
-  
-  // Function to manually test API connection
+  }, [mounted]);
+
   const testApiConnection = async () => {
     setIsLoadingCredits(true);
     setApiStatus('checking');
@@ -77,7 +81,6 @@ export default function Humanizer() {
     }
   };
 
-  // Simulate progress updates
   const simulateProgress = () => {
     setProgress(0);
     const interval = setInterval(() => {
@@ -99,48 +102,27 @@ export default function Humanizer() {
     setError(null);
     setProgress(0);
     
-    // Start progress simulation
     const progressInterval = simulateProgress();
     
     try {
-      // Update API status to checking
       setApiStatus('checking');
       
-      // Call the Undetectable AI API with the selected options
-      try {
-        const humanized = await humanizeText(inputText, options);
-        setOutputText(humanized);
-        
-        // Set progress to 100% when complete
-        setProgress(100);
-        
-        // Update API status to connected since we got a response
-        setApiStatus('connected');
-        
-        // Generate ID and timestamp client-side only
-        const historyItem: HumanizationHistoryItem = {
-          // Use crypto.randomUUID() which is more stable across renders
-          id: crypto.randomUUID(),
-          // Create timestamp at the moment of adding to history
-          timestamp: new Date(),
-          inputText,
-          outputText: humanized,
-          options: {...options},
-          characterCount: inputText.length
-        };
-        
-        setHumanizationHistory(prev => [historyItem, ...prev.slice(0, 9)]); // Keep last 10 items
-      } catch (humanizeError: unknown) {
-        console.error('Error during humanization:', humanizeError);
-        const errorMessage = humanizeError instanceof Error ? humanizeError.message : 'Unknown error';
-        setError(`Humanization failed: ${errorMessage}`);
-        setApiStatus('disconnected');
-        
-        // Set progress to 100% to stop the progress animation
-        setProgress(100);
-      }
+      const humanized = await humanizeText(inputText, options);
+      setOutputText(humanized);
+      setProgress(100);
+      setApiStatus('connected');
       
-      // Refresh credits after successful humanization
+      const historyItem: HumanizationHistoryItem = {
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        inputText,
+        outputText: humanized,
+        options: {...options},
+        characterCount: inputText.length
+      };
+      
+      setHumanizationHistory(prev => [historyItem, ...prev.slice(0, 9)]);
+      
       try {
         const remainingCredits = await getCreditsRemaining();
         setCredits(remainingCredits);
@@ -150,22 +132,23 @@ export default function Humanizer() {
     } catch (err) {
       console.error('Error humanizing text:', err);
       setError(`Failed to humanize text: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      
-      // Update API status to disconnected since we got an error
       setApiStatus('disconnected');
     } finally {
       clearInterval(progressInterval);
       setIsProcessing(false);
     }
   };
-  
-  // Helper function to handle option changes
+
   const handleOptionChange = (key: keyof HumanizeOptions, value: string) => {
     setOptions(prev => ({
       ...prev,
       [key]: value
     }));
   };
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4">
@@ -226,14 +209,12 @@ export default function Humanizer() {
                       try {
                         const importedHistory = JSON.parse(event.target?.result as string);
                         if (Array.isArray(importedHistory)) {
-                          // Convert string dates back to Date objects
                           const processedHistory = importedHistory.map(item => ({
                             ...item,
                             timestamp: new Date(item.timestamp)
                           }));
                           
                           setHumanizationHistory(prev => {
-                            // Merge histories, avoid duplicates by ID, and keep most recent 50 items
                             const combined = [...processedHistory, ...prev];
                             const uniqueIds = new Set();
                             const uniqueHistory = combined.filter(item => {
@@ -252,7 +233,6 @@ export default function Humanizer() {
                         alert('Failed to import history. Please make sure the file is a valid JSON export.');
                       }
                       
-                      // Clear the input to allow importing the same file again
                       e.target.value = '';
                     };
                     reader.readAsText(file);
@@ -355,9 +335,6 @@ export default function Humanizer() {
           {apiStatus === 'disconnected' && (
             <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md">
               <div className="flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
                 <div>
                   <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">API Connection Issue</p>
                   <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
@@ -597,7 +574,6 @@ export default function Humanizer() {
               <Button 
                 variant="secondary" 
                 onClick={() => {
-                  // Create a download link for the text
                   const element = document.createElement('a');
                   const file = new Blob([outputText], {type: 'text/plain'});
                   element.href = URL.createObjectURL(file);
