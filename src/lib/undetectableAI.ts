@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 // API credentials
-const USER_ID = '79b84da7-bb2a-4e36-a135-e77e0f3e5144';
 const API_KEY = 'dd410c04-f157-4f4c-9e41-b7d125f2b339';
 const API_BASE_URL = 'https://humanize.undetectable.ai';
 
@@ -202,8 +201,8 @@ export async function getCreditsRemaining(): Promise<number> {
       console.warn('Credits API returned unexpected response');
       return 0;
     }
-  } catch (error: unknown) {
-    console.error('Error checking credits:', error);
+  } catch {
+    console.error('Error checking credits');
     return 0;
   }
 }
