@@ -2,10 +2,21 @@
 
 import dynamic from 'next/dynamic';
 
-// Use dynamic import to avoid hydration issues with the Humanizer component
+// Use dynamic import with ssr: false to ensure the component only renders on the client
 const Humanizer = dynamic(() => import('@/components/Humanizer'), {
   ssr: false,
-  loading: () => <p className="text-center p-12">Loading Humanizer...</p>
+  loading: () => (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center">
+        <div className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Loading Humanizer...
+        </div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Please wait while we initialize the text humanizer.
+        </div>
+      </div>
+    </div>
+  )
 });
 
 export default function HumanizerClient() {
