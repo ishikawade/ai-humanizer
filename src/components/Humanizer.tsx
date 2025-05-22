@@ -76,11 +76,6 @@ export default function Humanizer() {
       setIsLoadingCredits(false);
     }
   };
-  
-  // Generate a unique ID for history items
-  const generateId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-  };
 
   // Simulate progress updates
   const simulateProgress = () => {
@@ -122,9 +117,11 @@ export default function Humanizer() {
         // Update API status to connected since we got a response
         setApiStatus('connected');
         
-        // Add to history
+        // Generate ID and timestamp client-side only
         const historyItem: HumanizationHistoryItem = {
-          id: generateId(),
+          // Use crypto.randomUUID() which is more stable across renders
+          id: crypto.randomUUID(),
+          // Create timestamp at the moment of adding to history
           timestamp: new Date(),
           inputText,
           outputText: humanized,
@@ -143,8 +140,6 @@ export default function Humanizer() {
         setProgress(100);
       }
       
-      // History is now added inside the try block
-      
       // Refresh credits after successful humanization
       try {
         const remainingCredits = await getCreditsRemaining();
@@ -158,9 +153,6 @@ export default function Humanizer() {
       
       // Update API status to disconnected since we got an error
       setApiStatus('disconnected');
-      
-      // Our API integration now handles fallback internally, so we don't need this code anymore
-      // The humanizeText function will return a fallback humanized text if the API fails
     } finally {
       clearInterval(progressInterval);
       setIsProcessing(false);
